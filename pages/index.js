@@ -55,9 +55,10 @@ export default function Home() {
           Authorization:
             "Bearer " + `${signedMessage.publicKey}.${signedMessage.signature}`,
         },
+        withCredentials: true,
       }
     );
-    console.log(`${signedMessage.publicKey}.${signedMessage.signature}`,response);
+    console.log(response.data.user);
   }
 
   return (
