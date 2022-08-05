@@ -1,37 +1,39 @@
-import Head from 'next/head'
-import styles from '../styles/Home.module.css'
-
-import React, { useState, useEffect } from 'react';
-import { signIn, signOut, useSession } from 'next-auth/client';
+import Head from "next/head";
+import styles from "../styles/Home.module.css";
+import axios from "axios";
+import React, { useState, useEffect } from "react";
+import { signIn, signOut, useSession } from "next-auth/client";
 
 export default function Home() {
   const [phantom, setPhantom] = useState();
   const [session] = useSession();
 
   useEffect(async () => {
-    if(window.solana) {
+    if (window.solana) {
       setPhantom(window.solana);
       await window.solana.connect();
     }
   }, []);
 
-  async function fetchNonce() {
-    
-    const response = await fetch('/api/login');
-  
-    if(response.status != 200)
-      throw new Error("nonce could not be retrieved");
+  const axiosInstance = axios.create({
+    withCredentials: true,
+  });
 
-    const { nonce } = await response.json();
-    
+  async function fetchNonce() {
+    const response = await axiosInstance.get(
+      "http://localhost:3001/api/v1/users/nonce"
+    );
+
+    const { nonce } = await response.data;
+    console.log(nonce);
+
     return nonce;
   }
 
   async function login() {
-
     const nonce = await fetchNonce();
 
-    const message = `Sign this message for authenticating with your wallet. Nonce: ${nonce}`;
+    const message = `Sign this message to prove you are the owner of the connected wallet - nonce: ${nonce}`;
     const encodedMessage = new TextEncoder().encode(message);
     const signedMessage = await solana.request({
       method: "signMessage",
@@ -39,14 +41,23 @@ export default function Home() {
         message: encodedMessage,
       },
     });
-
-    signIn('credentials',
+    const loginInstance = axios.create({
+      withCredentials: true,
+      headers: {
+        Authorization:
+          "Bearer" + `${signedMessage.publicKey}.${signedMessage.signature}`,
+      },
+    });
+    const response = await axios.get(
+      "http://localhost:3001/api/v1/users/login",
       {
-        publicKey: signedMessage.publicKey,
-        signature: signedMessage.signature,
-        callbackUrl: `${window.location.origin}/`
+        headers: {
+          Authorization:
+            "Bearer " + `${signedMessage.publicKey}.${signedMessage.signature}`,
+        },
       }
-    )
+    );
+    console.log(`${signedMessage.publicKey}.${signedMessage.signature}`,response);
   }
 
   return (
@@ -58,23 +69,25 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        {!phantom && <p className={styles.description}>This sample requires Phantom Wallet</p>}
+        {!phantom && (
+          <p className={styles.description}>
+            This sample requires Phantom Wallet
+          </p>
+        )}
 
-        {phantom && !session && <button onClick={login}>Login with Phantom</button> }
+        {phantom && !session && (
+          <button onClick={login}>Login with Phantom</button>
+        )}
 
-        {phantom && session && 
+        {phantom && session && (
           <>
-           <p className={styles.description}> Welcome {session?.user?.name}</p>
-           <button onClick={signOut}>Logout</button>
-          </> 
-        }
-
+            <p className={styles.description}> Welcome {session?.user?.name}</p>
+            <button onClick={signOut}>Logout</button>
+          </>
+        )}
       </main>
 
-      <footer className={styles.footer}>
-
-      </footer>
+      <footer className={styles.footer}></footer>
     </div>
-  )
+  );
 }
-
