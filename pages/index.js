@@ -61,6 +61,16 @@ export default function Home() {
     console.log(response.data.user);
   }
 
+  async function transact() {
+    const response = await axios.get(
+      "http://localhost:3001/api/v1/users/transaction",
+      {
+        withCredentials: true,
+      }
+    );
+    console.log(response.data);
+  }
+
   return (
     <div className={styles.container}>
       <Head>
@@ -80,12 +90,7 @@ export default function Home() {
           <button onClick={login}>Login with Phantom</button>
         )}
 
-        {phantom && session && (
-          <>
-            <p className={styles.description}> Welcome {session?.user?.name}</p>
-            <button onClick={signOut}>Logout</button>
-          </>
-        )}
+        {phantom && !session && <button onClick={transact}>Transact</button>}
       </main>
 
       <footer className={styles.footer}></footer>
